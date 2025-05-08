@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useLocations } from '@/hooks/useLocations';
 import { LocationsMap } from '@/components/map/locations-map';
 import { Button } from '@/components/ui/button';
@@ -72,10 +72,8 @@ export default function LocationsMapPage() {
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" asChild>
-                            <Link to="/locations">
-                                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                            </Link>
+                        <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+                            <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         <h1 className="text-3xl font-bold tracking-tight text-muted-foreground">Locations on Map</h1>
                     </div>

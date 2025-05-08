@@ -545,7 +545,7 @@ export default function LocationForm({ mode, locationId, shareToken }: LocationF
                                 <Calendar size={16} />
                                 <span className="hidden sm:inline">Scheduling</span>
                             </TabsTrigger>
-                        </TabsList>
+                            </TabsList>
 
                         <TabsContent value="basic" className="space-y-6">
                             <div className="grid gap-6 md:grid-cols-2">
@@ -1332,8 +1332,8 @@ export default function LocationForm({ mode, locationId, shareToken }: LocationF
                         </div>
 
                         <div className="flex gap-4">
-                            <Button type="button" variant="outline" asChild>
-                                <Link to={backLink}>Cancel</Link>
+                            <Button type="button" variant="outline" onClick={() => window.history.back()}>
+                                Cancel
                             </Button>
                             <Button
                                 type="submit"

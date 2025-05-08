@@ -1,9 +1,21 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, MapPin, Users, Heart, AreaChart, CalendarClock, ThumbsUp } from 'lucide-react';
+import { 
+    Star, 
+    MapPin, 
+    Users, 
+    Heart, 
+    AreaChart, 
+    CalendarClock, 
+    ThumbsUp, 
+    Edit, 
+    EyeOff, 
+    Eye,
+    MoreHorizontal
+} from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Tooltip,
@@ -11,7 +23,15 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Location } from '@/types/location';
+import { useAuthContext } from '@/hooks/useAuthContext';
+import { useUpdateLocationStatus } from '@/hooks/useLocations';
 
 interface LocationCardProps {
     location: Location;
@@ -20,6 +40,11 @@ interface LocationCardProps {
 export function LocationCard({ location }: LocationCardProps) {
     const [isImageLoading, setIsImageLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
+    const { user } = useAuthContext();
+    const navigate = useNavigate();
+    const updateLocationStatus = useUpdateLocationStatus();
+    
+    const isOwner = user && location.ownerId === user.id;
     const mainImage = location.images[0] || 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?q=80&w=2940&auto=format&fit=crop';
 
     const handleImageLoad = () => {
@@ -28,6 +53,42 @@ export function LocationCard({ location }: LocationCardProps) {
 
     const handleLocationClick = () => {
         sessionStorage.setItem('locationsScrollPosition', window.scrollY.toString());
+    };
+    
+    const handlePublish = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        updateLocationStatus.mutate(
+            { id: location.id, status: 'published' },
+            {
+                onSuccess: () => {
+                    location.status = 'published';
+                    window.location.reload();
+                }
+            }
+        );
+    };
+    
+    const handleUnpublish = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        updateLocationStatus.mutate(
+            { id: location.id, status: 'draft' },
+            {
+                onSuccess: () => {
+                    location.status = 'draft';
+                    window.location.reload();
+                }
+            }
+        );
+    };
+    
+    const handleEdit = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(`/locations/edit/${location.id}`);
     };
 
     return (
@@ -68,21 +129,60 @@ export function LocationCard({ location }: LocationCardProps) {
                                 Available
                             </Badge>
                         )}
+                        {location.status === 'draft' && isOwner && (
+                            <Badge className="bg-amber-500/90 text-card">
+                                Draft
+                            </Badge>
+                        )}
                     </div>
 
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className={`absolute top-3 right-3 bg-background/80 backdrop-blur-sm hover:bg-background/100 border-border/50 ${isFavorite ? 'text-red-500 hover:text-red-600' : ' hover:text-foreground'}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setIsFavorite(!isFavorite);
-                        }}
-                    >
-                        <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-                        <span className="sr-only">Add to favorites</span>
-                    </Button>
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                        {isOwner && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="bg-background/80 backdrop-blur-sm hover:bg-background/100 border-border/50"
+                                        onClick={(e) => e.preventDefault()}
+                                    >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem onClick={handleEdit}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </DropdownMenuItem>
+                                    {location.status === 'draft' ? (
+                                        <DropdownMenuItem onClick={handlePublish}>
+                                            <Eye className="h-4 w-4 mr-2" />
+                                            Publish
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={handleUnpublish}>
+                                            <EyeOff className="h-4 w-4 mr-2" />
+                                            Unpublish
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                        
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className={`bg-background/80 backdrop-blur-sm hover:bg-background/100 border-border/50 ${isFavorite ? 'text-red-500 hover:text-red-600' : ' hover:text-foreground'}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsFavorite(!isFavorite);
+                            }}
+                        >
+                            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+                            <span className="sr-only">Add to favorites</span>
+                        </Button>
+                    </div>
 
                     <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-background/90 via-background/70 to-transparent">
                         <h3 className="font-semibold text-lg leading-tight mb-1 text-white line-clamp-1">
@@ -155,10 +255,7 @@ export function LocationCard({ location }: LocationCardProps) {
                             <span className="text-2xl font-bold text-primary-foreground">{location.price}€</span>
                             <span className="text-sm text-muted-foreground">/hour</span>
                         </div>
-                        <Button
-                            onClick={(e) => e.preventDefault()}
-                            className="pointer-events-none"
-                        >
+                        <Button>
                             View Details
                         </Button>
                     </div>

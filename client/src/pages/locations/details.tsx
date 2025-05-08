@@ -23,8 +23,7 @@ import {
     EyeOff,
     Link2,
     Lock,
-    Eye
-} from "lucide-react";
+    Eye} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, useUpdateLocationStatus, useLocationShareAccess } from "@/hooks/useLocations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,7 +61,7 @@ export default function LocationDetailsPage() {
     const updateLocationStatus = useUpdateLocationStatus();
     const isMobile = useIsMobile();
 
-   
+
     const isOwner = Boolean(user && location?.ownerId === user.id);
     const effectiveAccessLevel = isOwner
         ? 'admin' as ShareAccessLevel
@@ -84,9 +83,13 @@ export default function LocationDetailsPage() {
 
         const timer = setInterval(() => {
             if (location?.images?.length && !showGallery && !showFullscreenImage) {
-                setActiveImageIndex(prev =>
-                    prev === (location.images.length - 1) ? 0 : prev + 1
-                );
+                setActiveImageIndex(prev => {
+                    if (prev >= Math.min(4, location.images.length - 1)) {
+                        return 0;
+                    } else {
+                        return prev + 1;
+                    }
+                });
             }
         }, 5000);
 
@@ -190,12 +193,10 @@ export default function LocationDetailsPage() {
                 <Button
                     variant="secondary"
                     size="icon"
-                    asChild
                     className="absolute top-6 left-6 rounded-full shadow-lg bg-background/80 backdrop-blur-md z-20"
+                    onClick={() => window.history.back()}
                 >
-                    <Link to="/locations" state={{ from: 'details' }}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Link>
+                    <ArrowLeft className="h-5 w-5" />
                 </Button>
 
                 {/* Action buttons */}
@@ -237,14 +238,14 @@ export default function LocationDetailsPage() {
                         </>
                     )}
                 </div>
-                
+
                 {/* Mobile actions dropdown */}
                 {isMobile && showMobileActions && (
                     <div className="absolute top-20 right-6 bg-background/95 backdrop-blur-md shadow-lg rounded-xl p-2 z-30 w-40">
                         <div className="flex flex-col">
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 className="justify-start py-2"
                                 onClick={() => {
                                     setIsShareDialogOpen(true);
@@ -261,7 +262,7 @@ export default function LocationDetailsPage() {
                             {canEdit && (
                                 <>
                                     <Separator className="my-1" />
-                                    <Button 
+                                    <Button
                                         variant="ghost"
                                         size="sm"
                                         className="justify-start py-2 text-red-500 hover:text-red-600 hover:bg-red-100/10"
@@ -465,7 +466,6 @@ export default function LocationDetailsPage() {
                                 </Card>
                             )}
 
-                            {/* Admin tools section - всегда отображается вторым, после блока бронирования */}
                             {canEdit && (
                                 <Card>
                                     <CardContent className="p-6">
@@ -480,7 +480,25 @@ export default function LocationDetailsPage() {
                                                 Edit Location
                                             </Button>
 
-                                            {location.status === 'published' && (
+                                            {location.status === 'draft' ? (
+                                                <Button
+                                                    variant="outline"
+                                                    className="flex items-center justify-center gap-2 w-full"
+                                                    onClick={() => {
+                                                        updateLocationStatus.mutate(
+                                                            { id: location.id, status: 'published' },
+                                                            {
+                                                                onSuccess: () => {
+                                                                    window.location.reload();
+                                                                }
+                                                            }
+                                                        );
+                                                    }}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                    Publish Location
+                                                </Button>
+                                            ) : location.status === 'published' && (
                                                 <Button
                                                     variant="outline"
                                                     className="flex items-center justify-center gap-2 w-full"
@@ -489,7 +507,7 @@ export default function LocationDetailsPage() {
                                                             { id: location.id, status: 'draft' },
                                                             {
                                                                 onSuccess: () => {
-                                                                    navigate('/locations');
+                                                                    window.location.reload();
                                                                 }
                                                             }
                                                         );
@@ -523,7 +541,6 @@ export default function LocationDetailsPage() {
 
                     {/* Main content middle section */}
                     <div className="order-1 lg:order-2 lg:col-span-2">
-                        {/* Access level banner for non-full access */}
                         {effectiveAccessLevel === 'photos_only' && (
                             <Card className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
                                 <CardContent className="p-4 flex items-center gap-3">
@@ -538,7 +555,6 @@ export default function LocationDetailsPage() {
                             </Card>
                         )}
 
-                        {/* Quick info cards - show only if basic info is available */}
                         {canViewBasicInfo && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-8 lg:mb-10">
                                 <Card className="border-0 shadow-none bg-muted/20">
@@ -591,7 +607,6 @@ export default function LocationDetailsPage() {
                             </div>
                         )}
 
-                        {/* Tabs for content - show only if details are available */}
                         {canViewDetails ? (
                             <Tabs defaultValue="details" className="w-full mb-10 text-muted-foreground">
                                 <TabsList className={`mb-6 ${isMobile ? 'w-full grid grid-cols-4' : ''}`}>
@@ -675,7 +690,6 @@ export default function LocationDetailsPage() {
                             </Card>
                         )}
 
-                        {/* Image gallery - адаптированная для мобильных устройств */}
                         <div className="mt-8 lg:mt-10">
                             <h2 className="text-xl lg:text-2xl text-muted-foreground font-semibold mb-4 lg:mb-6">
                                 {canViewBasicInfo ? 'Gallery' : 'Photos'}
@@ -708,7 +722,7 @@ export default function LocationDetailsPage() {
                                         onClick={() => setShowGallery(true)}
                                     >
                                         <Camera className="h-4 w-4 mr-1 text-muted-foreground" />
-                                        <span className={`text-muted-foreground ${isMobile ? 'text-xs' : ''}`}> 
+                                        <span className={`text-muted-foreground ${isMobile ? 'text-xs' : ''}`}>
                                             {isMobile ? `+${displayImages.length - 4} photos` : `View all ${displayImages.length} photos`}
                                         </span>
                                     </Button>
@@ -718,7 +732,6 @@ export default function LocationDetailsPage() {
                     </div>
                 </div>
             </div>
-
             {/* Mobile bottom action bar - only show if price is viewable */}
             {canViewPrice && isMobile && (
                 <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-40 flex items-center justify-between">
@@ -728,15 +741,13 @@ export default function LocationDetailsPage() {
                             <span className="text-muted-foreground">/hour</span>
                         </div>
                     </div>
-                    <Button 
+                    <Button
                         size="lg"
                         onClick={() => {
-                            // Прокрутить к блоку бронирования на мобильных устройствах
                             window.scrollTo({
                                 top: 0,
                                 behavior: 'smooth'
                             });
-                            // Добавить отступ для основного контента, чтобы предотвратить перекрытие нижней панелью
                             document.body.style.paddingBottom = '80px';
                         }}
                     >
@@ -745,7 +756,6 @@ export default function LocationDetailsPage() {
                 </div>
             )}
 
-            {/* Добавляем отступ внизу для мобильных устройств, чтобы контент не перекрывался нижней панелью */}
             {isMobile && canViewPrice && (
                 <div className="h-20 lg:h-0"></div>
             )}
@@ -755,7 +765,7 @@ export default function LocationDetailsPage() {
                 <div className="fixed inset-0 bg-black z-50 flex flex-col">
                     <div className="p-4 flex items-center justify-between text-white/90 bg-black/50">
                         <h3 className="font-medium">
-                            {canViewBasicInfo 
+                            {canViewBasicInfo
                                 ? `${location.title} - Photo ${activeImageIndex + 1} of ${displayImages.length}`
                                 : `Photo ${activeImageIndex + 1} of ${displayImages.length}`}
                         </h3>
@@ -767,8 +777,8 @@ export default function LocationDetailsPage() {
                     <div className="flex-1 relative">
                         <img
                             src={displayImages[activeImageIndex]}
-                            alt={canViewBasicInfo 
-                                ? `${location.title} - photo ${activeImageIndex + 1}` 
+                            alt={canViewBasicInfo
+                                ? `${location.title} - photo ${activeImageIndex + 1}`
                                 : `Photo ${activeImageIndex + 1}`}
                             className="absolute inset-0 w-full h-full object-contain"
                         />

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,7 +34,6 @@ export function DeleteLocationDialog({
     const [internalIsOpen, setInternalIsOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const deleteLocation = useDeleteLocation();
-    const navigate = useNavigate();
     const { toast } = useToast();
     const isMobile = useIsMobile();
 
@@ -67,22 +65,21 @@ export function DeleteLocationDialog({
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
-            await deleteLocation.mutateAsync(locationId);
-            setIsOpen(false);
+            await deleteLocation.mutateAsync(locationId, {
+                onSuccess: () => {
+                    setIsOpen(false);
+                    window.history.back();
+                },
+                onError: (error) => {
+                    setIsOpen(false);
+                    window.history.back();
+                    console.error("Error deleting location", error);
+                }
+            });
             toast({
                 title: 'Location Deleted',
                 description: `Location "${locationTitle}" has been successfully deleted`,
             });
-
-            if (window.location.pathname.includes(`/locations/${locationId}`)) {
-                if (isMobile) {
-                    setTimeout(() => {
-                        navigate('/locations');
-                    }, 100);
-                } else {
-                    navigate('/locations');
-                }
-            }
         } catch (error) {
             toast({
                 title: 'Error',
