@@ -151,7 +151,7 @@ export function DataMigrationManager() {
                         htmlFor="forceUpdate"
                         className="text-sm cursor-pointer"
                     >
-                        Обновить существующие локации (перезаписать данные)
+                       Reload existing locations (force update)
                     </Label>
                 </div>
             </CardContent>

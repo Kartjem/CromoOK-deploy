@@ -184,7 +184,7 @@ export function ImageUploadManager() {
                     ) : (
                         <>
                             <Upload className="mr-2 h-4 w-4" />
-                            Upload Images to Supabase
+                            Upload Images
                         </>
                     )}
                 </Button>
