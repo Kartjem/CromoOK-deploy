@@ -317,9 +317,9 @@ export default function LocationDetailsPage() {
                     <div className="max-w-4xl">
                         {canViewBasicInfo ? (
                             <>
-                                <Badge className="mb-3 bg-primary/90 hover:bg-primary text-white">
+                                {/* <Badge className="mb-3 bg-primary/90 hover:bg-primary text-white">
                                     {location.status === "published" ? "Available" : location.status}
-                                </Badge>
+                                </Badge> */}
                                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 leading-tight">
                                     {location.title}
                                 </h1>

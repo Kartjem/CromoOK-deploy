@@ -124,11 +124,11 @@ export function LocationCard({ location }: LocationCardProps) {
                                 </Tooltip>
                             </TooltipProvider>
                         )}
-                        {location.status === 'published' && (
+                        {/* {location.status === 'published' && (
                             <Badge className="bg-green-500/90 text-card">
                                 Available
                             </Badge>
-                        )}
+                        )} */}
                         {location.status === 'draft' && isOwner && (
                             <Badge className="bg-amber-500/90 text-card">
                                 Draft
