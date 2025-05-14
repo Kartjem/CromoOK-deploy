@@ -346,7 +346,7 @@ export default function LocationDetailsPage() {
                             {canViewPrice ? (
                                 <Card>
                                     <CardContent className="p-6">
-                                        <div className="flex items-baseline justify-between mb-6">
+                                        {/* <div className="flex items-baseline justify-between mb-6">
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-3xl font-bold">{location.price}€</span>
                                                 <span className="text-muted-foreground text-lg">/hour</span>
@@ -355,7 +355,7 @@ export default function LocationDetailsPage() {
                                                 <Clock className="h-4 w-4" />
                                                 <span>Min {location.minimumBookingHours || 2}h</span>
                                             </div>
-                                        </div>
+                                        </div> */}
 
                                         {/* Booking form */}
                                         <div className="space-y-4">
@@ -427,7 +427,7 @@ export default function LocationDetailsPage() {
                                         <Separator className="my-6" />
 
                                         {/* Price breakdown */}
-                                        <div className="space-y-3 mb-6">
+                                        {/* <div className="space-y-3 mb-6">
                                             <div className="flex justify-between">
                                                 <span>{location.price}€ × {bookingHours} hours</span>
                                                 <span>{location.price * bookingHours}€</span>
@@ -441,7 +441,7 @@ export default function LocationDetailsPage() {
                                                 <span>Total</span>
                                                 <span>{location.price * bookingHours + Math.round(location.price * bookingHours * 0.1)}€</span>
                                             </div>
-                                        </div>
+                                        </div> */}
 
                                         <Button className="w-full" size="lg">Book now</Button>
                                     </CardContent>

@@ -251,10 +251,10 @@ export function LocationCard({ location }: LocationCardProps) {
                     )}
 
                     <div className="flex items-center justify-between pt-4 border-t">
-                        <div className="flex flex-col">
+                        {/* <div className="flex flex-col">
                             <span className="text-2xl font-bold text-primary-foreground">{location.price}€</span>
                             <span className="text-sm text-muted-foreground">/hour</span>
-                        </div>
+                        </div> */}
                         <Button>
                             View Details
                         </Button>
