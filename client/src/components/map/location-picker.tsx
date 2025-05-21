@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { MapView } from './map-view';
-import mapboxgl from 'mapbox-gl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { MapPin } from 'lucide-react';
@@ -31,34 +28,35 @@ export function LocationPicker({
     const [address, setAddress] = useState<string>(defaultAddress || '');
     const geocoderContainer = useRef<HTMLDivElement>(null);
 
+    const isGoogleLoaded = typeof window !== 'undefined' && !!window.google && !!window.google.maps;
+    if (!isGoogleLoaded) {
+        return (
+            <div className={className + " flex items-center justify-center bg-muted/30"}>
+                <span className="text-muted-foreground">Loading Maps...</span>
+            </div>
+        );
+    }
+
     useEffect(() => {
         if (!geocoderContainer.current) return;
 
-        const geocoder = new MapboxGeocoder({
-            accessToken: mapboxgl.accessToken || '',
-            marker: false,
-            placeholder: 'Search for an address...',
-            language: 'en',
-        });
-
-        geocoder.addTo(geocoderContainer.current);
-
-        geocoder.on('result', (e) => {
-            const [lng, lat] = e.result.center;
-            setCoordinates({ latitude: lat, longitude: lng });
-            setAddress(e.result.place_name);
-            onLocationSelect?.({
-                address: e.result.place_name,
-                coordinates: { latitude: lat, longitude: lng }
-            });
-        });
+        const geocoder = new google.maps.Geocoder();
 
         if (defaultAddress) {
-            geocoder.query(defaultAddress);
+            geocoder.geocode({ address: defaultAddress }, (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                    const { lat, lng } = results[0].geometry.location;
+                    setCoordinates({ latitude: lat(), longitude: lng() });
+                    setAddress(results[0].formatted_address);
+                    onLocationSelect?.({
+                        address: results[0].formatted_address,
+                        coordinates: { latitude: lat(), longitude: lng() }
+                    });
+                }
+            });
         }
 
         return () => {
-            geocoder.onRemove();
         };
     }, [defaultAddress]);
 
@@ -66,17 +64,16 @@ export function LocationPicker({
         setCoordinates({ latitude: lngLat.lat, longitude: lngLat.lng });
 
         if (updateAddressOnClick) {
-            fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lngLat.lng},${lngLat.lat}.json?access_token=${mapboxgl.accessToken}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.features?.length > 0) {
-                        setAddress(data.features[0].place_name);
-                        onLocationSelect?.({
-                            address: data.features[0].place_name,
-                            coordinates: { latitude: lngLat.lat, longitude: lngLat.lng }
-                        });
-                    }
-                });
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: { lat: lngLat.lat, lng: lngLat.lng } }, (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                    setAddress(results[0].formatted_address);
+                    onLocationSelect?.({
+                        address: results[0].formatted_address,
+                        coordinates: { latitude: lngLat.lat, longitude: lngLat.lng }
+                    });
+                }
+            });
         } else {
             onLocationSelect?.({
                 address: address || defaultAddress || '',

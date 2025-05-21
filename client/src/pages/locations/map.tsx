@@ -157,7 +157,7 @@ export default function LocationsMapPage() {
                                         )}
 
                                         <div className="flex items-center justify-between pt-4 border-t">
-                                            
+
                                             <div className="flex gap-2 text-muted-foreground">
                                                 <Button variant="outline" onClick={handleCloseLocationSheet}>
                                                     Close
