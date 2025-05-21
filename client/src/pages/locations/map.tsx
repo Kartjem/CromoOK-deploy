@@ -157,10 +157,7 @@ export default function LocationsMapPage() {
                                         )}
 
                                         <div className="flex items-center justify-between pt-4 border-t">
-                                            <div>
-                                                <span className="font-bold text-2xl text-primary-foreground">{selectedLocation.price}€</span>
-                                                <span className="text-sm text-muted-foreground">/hour</span>
-                                            </div>
+                                            
                                             <div className="flex gap-2 text-muted-foreground">
                                                 <Button variant="outline" onClick={handleCloseLocationSheet}>
                                                     Close

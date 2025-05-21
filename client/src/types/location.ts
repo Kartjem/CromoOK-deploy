@@ -58,6 +58,11 @@ export interface LocationFilter {
     minArea?: number;
     maxArea?: number;
     amenities?: string[];
+    minCapacity?: number;
+    maxCapacity?: number;
+    status?: 'published' | 'draft' | 'archived';
+    createdAfter?: string;
+    createdBefore?: string;
 }
 
 export type CreateLocationDTO = Omit<Location, 'id' | 'createdAt' | 'updatedAt'>;

@@ -273,7 +273,7 @@ export default function LocationForm({ mode, locationId, shareToken }: LocationF
                     title: "Success!",
                     description: "Location updated successfully",
                 });
-                navigate(`/locations/${locationId}${shareToken ? `?token=${shareToken}` : ''}`);
+                navigate(`/locations/${locationId}${shareToken ? `?token=${shareToken}` : ''}`, { replace: true });
             }
 
         } catch (error: any) {
@@ -545,7 +545,7 @@ export default function LocationForm({ mode, locationId, shareToken }: LocationF
                                 <Calendar size={16} />
                                 <span className="hidden sm:inline">Scheduling</span>
                             </TabsTrigger>
-                            </TabsList>
+                        </TabsList>
 
                         <TabsContent value="basic" className="space-y-6">
                             <div className="grid gap-6 md:grid-cols-2">
@@ -748,7 +748,6 @@ export default function LocationForm({ mode, locationId, shareToken }: LocationF
                                     Upload high-quality images of your location. The first image will be used as the main image on listings.
                                 </FormDescription>
 
-                                {/* Drag and drop image upload area */}
                                 <div
                                     className={`border-2 border-dashed rounded-lg p-6 mb-6 transition-colors
                                         ${dragActive ? 'border-primary bg-primary/5' : 'border-gray-200'}

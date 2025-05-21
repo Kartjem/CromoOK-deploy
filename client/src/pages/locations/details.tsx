@@ -2,51 +2,44 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import {
     ArrowLeft,
     MapPin,
-    Clock,
     Share2,
     Heart,
     Camera,
     Users,
     Shield,
     AlertCircle,
-    CalendarRange,
     Edit,
-    Info,
     ChevronRight,
     LayoutGrid,
     Ruler,
     Check,
     X,
     ChevronLeft,
-    MinusCircle,
-    PlusCircle,
-    EyeOff,
-    Link2,
     Lock,
-    Eye} from "lucide-react";
+    Eye
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLocation, useUpdateLocationStatus, useLocationShareAccess } from "@/hooks/useLocations";
+import { useLocation, useLocationShareAccess, useLocations } from "@/hooks/useLocations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { MapView } from '@/components/map/map-view';
-import { DeleteLocationDialog } from '@/components/locations/delete-location-dialog';
 import { ShareLocationDialog } from '@/components/locations/share-location-dialog';
 import { useAuthContext } from '@/context/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShareAccessLevel } from "@/types/location";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function LocationDetailsPage() {
     const { id } = useParams();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const shareToken = searchParams.get('token');
     const accessLevelParam = searchParams.get('access') as ShareAccessLevel | null;
+    const initialTab = searchParams.get('tab') || 'details';
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     const { data: location, isLoading } = useLocation(id!, shareToken || undefined);
     const { data: accessLevel } = useLocationShareAccess(id!, shareToken || undefined);
+    const { data: allLocations } = useLocations();
     const { user } = useAuthContext();
     const navigate = useNavigate();
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -55,12 +48,12 @@ export default function LocationDetailsPage() {
     const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
     const [showMobileActions, setShowMobileActions] = useState(false);
 
-    const [bookingHours, setBookingHours] = useState(2);
-
     const [autoplayPaused, setAutoplayPaused] = useState(false);
-    const updateLocationStatus = useUpdateLocationStatus();
     const isMobile = useIsMobile();
 
+    const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+    const [isLocationSheetOpen, setIsLocationSheetOpen] = useState(false);
+    const [previewPanelClosing, setPreviewPanelClosing] = useState(false);
 
     const isOwner = Boolean(user && location?.ownerId === user.id);
     const effectiveAccessLevel = isOwner
@@ -69,14 +62,7 @@ export default function LocationDetailsPage() {
 
     const canViewBasicInfo = effectiveAccessLevel === 'full_info' || effectiveAccessLevel === 'admin';
     const canViewDetails = effectiveAccessLevel === 'full_info' || effectiveAccessLevel === 'admin';
-    const canViewPrice = effectiveAccessLevel === 'full_info' || effectiveAccessLevel === 'admin';
     const canEdit = isOwner || effectiveAccessLevel === 'admin';
-
-    useEffect(() => {
-        if (location?.minimumBookingHours) {
-            setBookingHours(location.minimumBookingHours);
-        }
-    }, [location]);
 
     useEffect(() => {
         if (autoplayPaused) return;
@@ -98,6 +84,20 @@ export default function LocationDetailsPage() {
 
     const pauseAutoplay = () => setAutoplayPaused(true);
     const resumeAutoplay = () => setAutoplayPaused(false);
+
+    useEffect(() => {
+        if (activeTab) {
+            searchParams.set('tab', activeTab);
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab') || 'details';
+        if (tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
 
     if (isLoading) {
         return (
@@ -146,7 +146,6 @@ export default function LocationDetailsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Full-width hero area with main image and title overlay */}
             <div
                 className="relative w-full rounded-3xl overflow-hidden"
                 style={{
@@ -169,10 +168,8 @@ export default function LocationDetailsPage() {
                     ))}
                 </div>
 
-                {/* Gradient overlay with enhanced aesthetic */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-                {/* Image navigation controls */}
                 <button
                     className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors z-20"
                     onClick={() => navigateImages('prev')}
@@ -189,7 +186,6 @@ export default function LocationDetailsPage() {
                     <ChevronRight className="h-6 w-6" />
                 </button>
 
-                {/* Back button */}
                 <Button
                     variant="secondary"
                     size="icon"
@@ -199,7 +195,6 @@ export default function LocationDetailsPage() {
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
 
-                {/* Action buttons */}
                 <div className="absolute top-6 right-6 flex items-center gap-3 z-20">
                     <Button
                         variant="secondary"
@@ -225,9 +220,21 @@ export default function LocationDetailsPage() {
                                 size="icon"
                                 className="rounded-full shadow-lg bg-background/80 backdrop-blur-md"
                                 onClick={() => setIsShareDialogOpen(true)}
+                                title="Share location"
                             >
                                 <Share2 className="h-4 w-4" />
                             </Button>
+                            {canEdit && (
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="rounded-full shadow-lg bg-background/80 backdrop-blur-md"
+                                    onClick={() => navigate(`/locations/edit/${location.id}`)}
+                                    title="Edit location"
+                                >
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                            )}
                             <Button
                                 variant="secondary"
                                 size="icon"
@@ -239,7 +246,6 @@ export default function LocationDetailsPage() {
                     )}
                 </div>
 
-                {/* Mobile actions dropdown */}
                 {isMobile && showMobileActions && (
                     <div className="absolute top-20 right-6 bg-background/95 backdrop-blur-md shadow-lg rounded-xl p-2 z-30 w-40">
                         <div className="flex flex-col">
@@ -280,7 +286,6 @@ export default function LocationDetailsPage() {
                     </div>
                 )}
 
-                {/* Fullscreen action */}
                 <Button
                     variant="secondary"
                     size="sm"
@@ -294,7 +299,6 @@ export default function LocationDetailsPage() {
                     <span>View photo</span>
                 </Button>
 
-                {/* Image gallery indicators */}
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                     {displayImages.slice(0, 5).map((_, idx) => (
                         <button
@@ -312,7 +316,6 @@ export default function LocationDetailsPage() {
                     ))}
                 </div>
 
-                {/* Title container with improved styling */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 md:p-10 z-10">
                     <div className="max-w-4xl">
                         {canViewBasicInfo ? (
@@ -320,10 +323,10 @@ export default function LocationDetailsPage() {
                                 {/* <Badge className="mb-3 bg-primary/90 hover:bg-primary text-white">
                                     {location.status === "published" ? "Available" : location.status}
                                 </Badge> */}
-                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 leading-tight">
+                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold  mb-3 leading-tight">
                                     {location.title}
                                 </h1>
-                                <div className="flex items-center gap-2 text-white/90">
+                                <div className="flex items-center gap-2 ">
                                     <MapPin className="h-4 w-4" />
                                     <span className="font-medium">{location.address}</span>
                                 </div>
@@ -341,206 +344,7 @@ export default function LocationDetailsPage() {
             {/* Main content */}
             <div className="max-w-7xl mx-auto px-4 py-6 lg:py-10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-                    <div className="order-2 lg:order-1">
-                        <div className="sticky top-6 space-y-4 lg:space-y-6">
-                            {canViewPrice ? (
-                                <Card>
-                                    <CardContent className="p-6">
-                                        {/* <div className="flex items-baseline justify-between mb-6">
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-3xl font-bold">{location.price}€</span>
-                                                <span className="text-muted-foreground text-lg">/hour</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                <Clock className="h-4 w-4" />
-                                                <span>Min {location.minimumBookingHours || 2}h</span>
-                                            </div>
-                                        </div> */}
-
-                                        {/* Booking form */}
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <Button variant="outline" className="h-14 text-left justify-start p-3">
-                                                    <div className="flex flex-col items-start">
-                                                        <span className="text-xs text-muted-foreground">Date</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <CalendarRange className="h-4 w-4" />
-                                                            <span>Select date</span>
-                                                        </div>
-                                                    </div>
-                                                </Button>
-
-                                                <Button variant="outline" className="h-14 text-left justify-start p-3">
-                                                    <div className="flex flex-col items-start">
-                                                        <span className="text-xs text-muted-foreground">Time</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <Clock className="h-4 w-4" />
-                                                            <span>Select time</span>
-                                                        </div>
-                                                    </div>
-                                                </Button>
-                                            </div>
-
-                                            <div className="flex items-center justify-between p-3 border rounded-md h-14">
-                                                <div className="flex flex-col items-start">
-                                                    <span className="text-xs text-muted-foreground">Duration</span>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <Clock className="h-4 w-4" />
-                                                        <span>{bookingHours} hours</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => {
-                                                            const minHours = location.minimumBookingHours || 2;
-                                                            if (bookingHours > minHours) {
-                                                                setBookingHours(bookingHours - 1);
-                                                            }
-                                                        }}
-                                                        disabled={bookingHours <= (location.minimumBookingHours || 2)}
-                                                    >
-                                                        <MinusCircle className="h-5 w-5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setBookingHours(bookingHours + 1)}
-                                                    >
-                                                        <PlusCircle className="h-5 w-5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            <Button variant="outline" className="w-full h-14 text-left justify-start p-3">
-                                                <div className="flex flex-col items-start">
-                                                    <span className="text-xs text-muted-foreground">Guests</span>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <Users className="h-4 w-4" />
-                                                        <span>Number of people</span>
-                                                    </div>
-                                                </div>
-                                            </Button>
-                                        </div>
-
-                                        <Separator className="my-6" />
-
-                                        {/* Price breakdown */}
-                                        {/* <div className="space-y-3 mb-6">
-                                            <div className="flex justify-between">
-                                                <span>{location.price}€ × {bookingHours} hours</span>
-                                                <span>{location.price * bookingHours}€</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Service fee</span>
-                                                <span>{Math.round(location.price * bookingHours * 0.1)}€</span>
-                                            </div>
-                                            <Separator className="my-2" />
-                                            <div className="flex justify-between font-semibold">
-                                                <span>Total</span>
-                                                <span>{location.price * bookingHours + Math.round(location.price * bookingHours * 0.1)}€</span>
-                                            </div>
-                                        </div> */}
-
-                                        <Button className="w-full" size="lg">Book now</Button>
-                                    </CardContent>
-                                    <div className="p-4 border-t bg-muted/20">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
-                                            <span className="text-muted-foreground">
-                                                You won't be charged yet
-                                            </span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ) : (
-                                <Card className="p-6">
-                                    <div className="flex items-center justify-center flex-col space-y-3 py-8">
-                                        <Lock className="h-10 w-10 text-muted-foreground/50" />
-                                        <h3 className="text-xl font-medium">Pricing Information Hidden</h3>
-                                        <p className="text-muted-foreground text-center max-w-xs">
-                                            Pricing and booking details for this location are not available with your current access level.
-                                        </p>
-                                    </div>
-                                </Card>
-                            )}
-
-                            {canEdit && (
-                                <Card>
-                                    <CardContent className="p-6">
-                                        <h2 className="text-base font-semibold mb-4">Location management</h2>
-                                        <div className="flex flex-col gap-3">
-                                            <Button
-                                                variant="outline"
-                                                className="flex items-center justify-center gap-2 w-full"
-                                                onClick={() => navigate(`/locations/edit/${location.id}`)}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                                Edit Location
-                                            </Button>
-
-                                            {location.status === 'draft' ? (
-                                                <Button
-                                                    variant="outline"
-                                                    className="flex items-center justify-center gap-2 w-full"
-                                                    onClick={() => {
-                                                        updateLocationStatus.mutate(
-                                                            { id: location.id, status: 'published' },
-                                                            {
-                                                                onSuccess: () => {
-                                                                    window.location.reload();
-                                                                }
-                                                            }
-                                                        );
-                                                    }}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                    Publish Location
-                                                </Button>
-                                            ) : location.status === 'published' && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="flex items-center justify-center gap-2 w-full"
-                                                    onClick={() => {
-                                                        updateLocationStatus.mutate(
-                                                            { id: location.id, status: 'draft' },
-                                                            {
-                                                                onSuccess: () => {
-                                                                    window.location.reload();
-                                                                }
-                                                            }
-                                                        );
-                                                    }}
-                                                >
-                                                    <EyeOff className="h-4 w-4" />
-                                                    Unpublish Location
-                                                </Button>
-                                            )}
-
-                                            <Button
-                                                variant="outline"
-                                                className="flex items-center justify-center gap-2 w-full"
-                                                onClick={() => setIsShareDialogOpen(true)}
-                                            >
-                                                <Link2 className="h-4 w-4" />
-                                                Share link
-                                            </Button>
-
-                                            <DeleteLocationDialog
-                                                locationId={location.id}
-                                                locationTitle={location.title}
-                                                isOwner={isOwner}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Main content middle section */}
-                    <div className="order-1 lg:order-2 lg:col-span-2">
+                    <div className="order-1 lg:order-2 lg:col-span-3">
                         {effectiveAccessLevel === 'photos_only' && (
                             <Card className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
                                 <CardContent className="p-4 flex items-center gap-3">
@@ -608,7 +412,7 @@ export default function LocationDetailsPage() {
                         )}
 
                         {canViewDetails ? (
-                            <Tabs defaultValue="details" className="w-full mb-10 text-muted-foreground">
+                            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={initialTab} className="w-full mb-10 text-muted-foreground">
                                 <TabsList className={`mb-6 ${isMobile ? 'w-full grid grid-cols-4' : ''}`}>
                                     <TabsTrigger value="details" className={isMobile ? 'text-xs' : ''}>Details</TabsTrigger>
                                     <TabsTrigger value="amenities" className={isMobile ? 'text-xs' : ''}>Amenities</TabsTrigger>
@@ -663,14 +467,114 @@ export default function LocationDetailsPage() {
 
                                 <TabsContent value="map">
                                     <h2 className="text-2xl font-semibold mb-6">Location on map</h2>
-                                    {location.coordinates ? (
-                                        <MapView
-                                            latitude={location.coordinates.latitude}
-                                            longitude={location.coordinates.longitude}
-                                            zoom={15}
-                                            interactive={true}
-                                            className="w-full h-[500px] rounded-xl overflow-hidden"
-                                        />
+                                    {location.coordinates && allLocations ? (
+                                        <div className="relative w-full h-[500px] rounded-xl overflow-hidden">
+                                            <DetailedLocationsMap
+                                                locations={allLocations.filter(l => l.coordinates)}
+                                                currentLocationId={location.id}
+                                                onLocationClick={loc => {
+                                                    if (loc.id === location.id) return;
+                                                    setSelectedLocation(loc);
+                                                    setIsLocationSheetOpen(true);
+                                                }}
+                                                center={{
+                                                    latitude: location.coordinates.latitude,
+                                                    longitude: location.coordinates.longitude,
+                                                    zoom: 15
+                                                }}
+                                                className="w-full h-full"
+                                            />
+                                            {isLocationSheetOpen && selectedLocation && (
+                                                <>
+                                                    <div
+                                                        className="absolute inset-0 z-20 bg-black/80 cursor-pointer transition-opacity duration-500"
+                                                        onClick={() => {
+                                                            setPreviewPanelClosing(true);
+                                                            setTimeout(() => {
+                                                                setIsLocationSheetOpen(false);
+                                                                setPreviewPanelClosing(false);
+                                                            }, 400);
+                                                        }}
+                                                        aria-label="Close location preview"
+                                                    />
+                                                    <div
+                                                        className={`absolute top-0 right-0 h-full max-w-[400px] w-full sm:w-[350px] bg-background shadow-xl border-l border-border z-30 ${previewPanelClosing ? 'preview-slide-out' : 'preview-slide-in'}`}
+                                                        style={{ boxShadow: '0 0 32px 0 rgba(0,0,0,0.10)' }}
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        <div className="p-5 flex flex-col h-full">
+                                                            <div className="flex items-start justify-between mb-2">
+                                                                <div>
+                                                                    <h3 className="text-lg font-semibold text-primary-foreground mb-1">{selectedLocation.title}</h3>
+                                                                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                                                                        <MapPin className="h-4 w-4" />
+                                                                        {selectedLocation.address}
+                                                                    </div>
+                                                                </div>
+                                                                <Button variant="ghost" size="icon" onClick={() => {
+                                                                    setPreviewPanelClosing(true);
+                                                                    setTimeout(() => {
+                                                                        setIsLocationSheetOpen(false);
+                                                                        setPreviewPanelClosing(false);
+                                                                    }, 400);
+                                                                }}>
+                                                                    <X className="h-5 w-5" />
+                                                                </Button>
+                                                            </div>
+                                                            <div className="aspect-video rounded-md overflow-hidden mb-4">
+                                                                <img
+                                                                    src={selectedLocation.images[0] || 'https://via.placeholder.com/800x600'}
+                                                                    alt={selectedLocation.title}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-3 flex-1 overflow-y-auto">
+                                                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                                                    {selectedLocation.description}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center justify-between pt-4 border-t mt-4">
+                                                                <Button variant="outline" onClick={() => {
+                                                                    setPreviewPanelClosing(true);
+                                                                    setTimeout(() => {
+                                                                        setIsLocationSheetOpen(false);
+                                                                        setPreviewPanelClosing(false);
+                                                                    }, 400);
+                                                                }}>
+                                                                    Close
+                                                                </Button>
+                                                                <Button onClick={() => {
+                                                                    setPreviewPanelClosing(true);
+                                                                    setTimeout(() => {
+                                                                        setIsLocationSheetOpen(false);
+                                                                        setPreviewPanelClosing(false);
+                                                                        navigate(`/locations/${selectedLocation.id}?tab=details`);
+                                                                    }, 400);
+                                                                }}>
+                                                                    View Details
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <style>{`
+                                                    .preview-slide-in {
+                                                      animation: previewSlideIn 0.5s cubic-bezier(.4,0,.2,1);
+                                                    }
+                                                    @keyframes previewSlideIn {
+                                                      from { transform: translateX(100%); opacity: 0.7; }
+                                                      to { transform: translateX(0); opacity: 1; }
+                                                    }
+                                                    .preview-slide-out {
+                                                      animation: previewSlideOut 0.4s cubic-bezier(.4,0,.2,1) forwards;
+                                                    }
+                                                    @keyframes previewSlideOut {
+                                                      from { transform: translateX(0); opacity: 1; }
+                                                      to { transform: translateX(100%); opacity: 0.7; }
+                                                    }
+                                                    `}</style>
+                                                </>
+                                            )}
+                                        </div>
                                     ) : (
                                         <p className="text-muted-foreground">Map location not available.</p>
                                     )}
@@ -732,34 +636,6 @@ export default function LocationDetailsPage() {
                     </div>
                 </div>
             </div>
-            {/* Mobile bottom action bar - only show if price is viewable */}
-            {canViewPrice && isMobile && (
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-40 flex items-center justify-between">
-                    <div>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold">{location.price}€</span>
-                            <span className="text-muted-foreground">/hour</span>
-                        </div>
-                    </div>
-                    <Button
-                        size="lg"
-                        onClick={() => {
-                            window.scrollTo({
-                                top: 0,
-                                behavior: 'smooth'
-                            });
-                            document.body.style.paddingBottom = '80px';
-                        }}
-                    >
-                        Book now
-                    </Button>
-                </div>
-            )}
-
-            {isMobile && canViewPrice && (
-                <div className="h-20 lg:h-0"></div>
-            )}
-
             {/* Fullscreen image */}
             {showFullscreenImage && (
                 <div className="fixed inset-0 bg-black z-50 flex flex-col">
@@ -843,14 +719,287 @@ export default function LocationDetailsPage() {
             )}
 
             {/* Share link dialog */}
-            {location.shareToken && (
-                <ShareLocationDialog
-                    isOpen={isShareDialogOpen}
-                    onClose={() => setIsShareDialogOpen(false)}
-                    locationId={location.id}
-                    locationTitle={location.title}
-                />
-            )}
+            <ShareLocationDialog
+                isOpen={isShareDialogOpen}
+                onClose={() => setIsShareDialogOpen(false)}
+                locationId={location.id}
+                locationTitle={location.title}
+            />
         </div>
+    );
+}
+
+import mapboxgl from 'mapbox-gl';
+import { useRef, useEffect, useState } from 'react';
+import { useTheme } from '@/hooks/use-theme';
+import type { Location } from '@/types/location';
+
+function DetailedLocationsMap({
+    locations,
+    currentLocationId,
+    onLocationClick,
+    center,
+    className
+}: {
+    locations: Location[];
+    currentLocationId: string;
+    onLocationClick: (location: Location) => void;
+    center: { latitude: number; longitude: number; zoom: number };
+    className?: string;
+}) {
+    const isMobile = useIsMobile();
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<mapboxgl.Map | null>(null);
+    const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
+    const popupsRef = useRef<{ [key: string]: mapboxgl.Popup }>({});
+    const overlayRef = useRef<HTMLDivElement | null>(null);
+    const [currentStyle, setCurrentStyle] = useState<string>('streets');
+    const { theme } = useTheme();
+
+    useEffect(() => {
+        const styleEl = document.createElement('style');
+        styleEl.innerHTML = `
+          .mapboxgl-ctrl-group { background-color: #1f2937 !important; border-color: #374151 !important; }
+          .mapboxgl-ctrl-group button { background-color: #1f2937 !important; }
+          .mapboxgl-ctrl-group button:hover { background-color: #374151 !important; }
+          .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon { filter: brightness(0) invert(1) !important; }
+          .mapboxgl-ctrl-group button.style-switcher-btn, .mapboxgl-ctrl-group button.center-marker-btn { color: white !important; }
+          .style-switcher-dropdown { background-color: #1f2937 !important; color: white !important; }
+          .style-switcher-dropdown div { color: white !important; }
+          .style-switcher-dropdown div:hover { background-color: #374151 !important; }
+          .style-switcher-dropdown div.active { background-color: #4b5563 !important; }
+          .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { display: none !important; }
+          .location-marker { transition: box-shadow 0.2s, border 0.2s, width 0.2s, height 0.2s; will-change: box-shadow, border, width, height; }
+        `;
+        document.head.appendChild(styleEl);
+        return () => styleEl.remove();
+    }, []);
+
+    useEffect(() => {
+        if (mapRef.current) {
+            const targetStyle = 'streets';
+            if (currentStyle !== targetStyle) {
+                mapRef.current.setStyle('mapbox://styles/mapbox/streets-v12');
+                setCurrentStyle(targetStyle);
+            }
+        }
+    }, [theme, currentStyle]);
+
+    useEffect(() => {
+        if (!mapContainerRef.current) return;
+        const token = import.meta.env.VITE_MAPBOX_TOKEN;
+        if (!token) return;
+        mapboxgl.accessToken = token;
+        const initialStyleKey = 'streets';
+        mapRef.current = new mapboxgl.Map({
+            container: mapContainerRef.current,
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [center.longitude, center.latitude],
+            zoom: center.zoom,
+            attributionControl: false
+        });
+        setCurrentStyle(initialStyleKey);
+        if (isMobile) {
+            mapRef.current.dragPan.disable();
+            mapRef.current.touchZoomRotate.enable();
+        }
+        mapRef.current.scrollZoom.disable();
+        const overlay = document.createElement('div');
+        overlay.className = 'map-control-overlay';
+        Object.assign(overlay.style, {
+            position: 'absolute', left: '50%', bottom: '20px', transform: 'translateX(-50%)', backgroundColor: 'rgba(0, 0, 0, 0.6)', color: 'white', padding: '8px 12px', borderRadius: '4px', pointerEvents: 'none', opacity: '0.8', transition: 'opacity 0.3s ease', zIndex: '10'
+        });
+        overlay.innerHTML = 'Click to enable map controls';
+        mapContainerRef.current.style.position = 'relative';
+        mapContainerRef.current.appendChild(overlay);
+        overlayRef.current = overlay;
+        setTimeout(() => (overlay.style.opacity = '0'), 3000);
+        mapContainerRef.current.addEventListener('click', () => {
+            if (mapRef.current && !mapRef.current.scrollZoom.isEnabled()) {
+                mapRef.current.scrollZoom.enable();
+                overlay.style.opacity = '0';
+                showTemporaryMessage('Map control enabled');
+            }
+        });
+        mapContainerRef.current.addEventListener('mouseleave', () => {
+            if (mapRef.current && mapRef.current.scrollZoom.isEnabled()) {
+                mapRef.current.scrollZoom.disable();
+                showTemporaryMessage('Map control disabled');
+            }
+        });
+        const map = mapRef.current;
+        map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        class StyleSwitcherControl {
+            private map: mapboxgl.Map;
+            private container: HTMLElement;
+            constructor() {
+                this.map = map as mapboxgl.Map;
+                this.container = document.createElement('div');
+            }
+            onAdd() {
+                this.container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+                this.container.innerHTML = `
+          <button class="mapboxgl-ctrl-icon style-switcher-btn" style="width: auto; padding: 0 10px;" title="Change Style">
+            View
+          </button>
+        `;
+                const dropdown = document.createElement('div');
+                dropdown.className = 'style-switcher-dropdown';
+                Object.assign(dropdown.style, {
+                    display: 'none', position: 'absolute', borderRadius: '4px', padding: '5px', zIndex: '1', right: '0', top: '40px'
+                });
+                Object.entries({
+                    streets: 'mapbox://styles/mapbox/streets-v12',
+                    satellite: 'mapbox://styles/mapbox/satellite-v9',
+                    outdoors: 'mapbox://styles/mapbox/outdoors-v12',
+                    light: 'mapbox://styles/mapbox/light-v11',
+                    dark: 'mapbox://styles/mapbox/dark-v11'
+                }).forEach(([key, value]) => {
+                    const option = document.createElement('div');
+                    option.style.padding = '5px 10px';
+                    option.style.cursor = 'pointer';
+                    option.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+                    if (key === currentStyle) option.classList.add('active');
+                    option.addEventListener('click', () => {
+                        this.map.setStyle(value);
+                        setCurrentStyle(key);
+                        dropdown.style.display = 'none';
+                        dropdown.querySelectorAll('div').forEach(d => d.classList.remove('active'));
+                        option.classList.add('active');
+                    });
+                    dropdown.appendChild(option);
+                });
+                this.container.appendChild(dropdown);
+                this.container.querySelector('button')?.addEventListener('click', () => {
+                    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                });
+                document.addEventListener('click', (e) => {
+                    if (!this.container.contains(e.target as Node)) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+                return this.container;
+            }
+            onRemove() {
+                this.container.parentNode?.removeChild(this.container);
+            }
+        }
+        map.addControl(new StyleSwitcherControl(), 'top-right');
+        map.on('load', () => {
+            locations.forEach(location => createMarker(location, currentLocationId));
+        });
+        return () => {
+            Object.values(markersRef.current).forEach(marker => marker.remove());
+            markersRef.current = {};
+            Object.values(popupsRef.current).forEach(popup => popup.remove());
+            popupsRef.current = {};
+            mapRef.current?.remove();
+        };
+    }, []);
+    useEffect(() => {
+        if (!mapRef.current) return;
+        Object.keys(markersRef.current).forEach(id => {
+            if (!locations.some(loc => loc.id === id)) {
+                markersRef.current[id].remove();
+                delete markersRef.current[id];
+                if (popupsRef.current[id]) {
+                    popupsRef.current[id].remove();
+                    delete popupsRef.current[id];
+                }
+            }
+        });
+        locations.forEach(location => {
+            if (!location.coordinates) return;
+            if (markersRef.current[location.id]) {
+                markersRef.current[location.id].setLngLat([
+                    location.coordinates.longitude,
+                    location.coordinates.latitude
+                ]);
+            } else {
+                createMarker(location, currentLocationId);
+            }
+        });
+    }, [locations, currentLocationId]);
+    useEffect(() => {
+        if (!mapRef.current) return;
+        mapRef.current.flyTo({
+            center: [center.longitude, center.latitude],
+            zoom: center.zoom,
+            essential: true,
+            duration: 1000
+        });
+    }, [center.latitude, center.longitude, center.zoom]);
+    function createMarker(location: Location, currentId: string) {
+        if (!mapRef.current || !location.coordinates) return;
+        const el = document.createElement('div');
+        el.className = 'location-marker';
+        el.style.width = location.id === currentId ? '60px' : '50px';
+        el.style.height = el.style.width;
+        el.style.borderRadius = '50%';
+        el.style.overflow = 'hidden';
+        el.style.border = location.id === currentId ? '3px solid #ef4444' : '2px solid var(--card)';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        el.style.cursor = 'pointer';
+        el.style.backgroundImage = `url(${location.images[0] || 'https://via.placeholder.com/150'})`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        const popupStyles = `
+        .mapboxgl-popup-content { background-color: var(--card); color: var(--card-foreground); border-radius: var(--radius); padding: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .mapboxgl-popup-tip { border-top-color: var(--card); border-bottom-color: var(--card); }
+        .location-popup-title { font-weight: 600; margin-bottom: 5px; color: var(--card-foreground); }
+        .location-popup-address { font-size: 12px; margin-bottom: 8px; color: var (--muted-foreground); }
+        .location-popup-tag { font-size: 10px; background: var(--secondary); color: var(--secondary-foreground); padding: 1px 6px; border-radius: 9999px; display: inline-block; margin-right: 4px; margin-bottom: 4px; }
+        `;
+        const styleElement = document.createElement('style');
+        styleElement.innerHTML = popupStyles;
+        document.head.appendChild(styleElement);
+        const popup = new mapboxgl.Popup({
+            offset: 25,
+            closeButton: false,
+            closeOnClick: false,
+            className: 'location-popup'
+        }).setHTML(`
+            <div>
+                <h3 class="location-popup-title">${location.title}</h3>
+                <p class="location-popup-address">${location.address}</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    ${location.tags?.slice(0, 3).map(tag =>
+            `<span class="location-popup-tag">${tag}</span>`
+        ).join('') || ''}
+                </div>
+            </div>
+        `);
+        const marker = new mapboxgl.Marker(el)
+            .setLngLat([location.coordinates.longitude, location.coordinates.latitude])
+            .setPopup(popup)
+            .addTo(mapRef.current);
+        el.addEventListener('click', () => {
+            onLocationClick(location);
+        });
+        el.addEventListener('mouseenter', () => {
+            popup.addTo(mapRef.current!);
+        });
+        el.addEventListener('mouseleave', () => {
+            popup.remove();
+        });
+        markersRef.current[location.id] = marker;
+        popupsRef.current[location.id] = popup;
+    }
+    function showTemporaryMessage(message: string) {
+        if (!mapContainerRef.current) return;
+        const tempOverlay = document.createElement('div');
+        Object.assign(tempOverlay.style, {
+            position: 'absolute', left: '50%', bottom: '20px', transform: 'translateX(-50%)', backgroundColor: 'var(--card)', color: 'var(--card-foreground)', padding: '8px 12px', borderRadius: '4px', pointerEvents: 'none', opacity: '0.9', transition: 'opacity 0.3s ease', zIndex: '10', boxShadow: '0 2px 8px rgba(0,0,0,0.2)', border: '1px solid var(--border)'
+        });
+        tempOverlay.innerText = message;
+        mapContainerRef.current.appendChild(tempOverlay);
+        setTimeout(() => {
+            tempOverlay.style.opacity = '0';
+            setTimeout(() => tempOverlay.remove(), 300);
+        }, 2000);
+    }
+    return (
+        <div ref={mapContainerRef} className={className}></div>
     );
 }

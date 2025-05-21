@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTheme } from '@/hooks/use-theme';
+import { useIsMobile } from '@/hooks/use-mobile';
+import type { Location } from '@/types/location';
 
 const mapControlStyles = `
   .mapboxgl-ctrl-group {
@@ -38,6 +40,10 @@ const mapControlStyles = `
   .mapboxgl-ctrl-bottom-right {
     display: none !important;
   }
+  .location-marker-avatar {
+    transition: box-shadow 0.2s, border 0.2s, width 0.2s, height 0.2s;
+    will-change: box-shadow, border, width, height;
+  }
 `;
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -65,6 +71,8 @@ interface MapViewProps {
   className?: string;
   showControls?: boolean;
   controlPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  locations?: Location[];
+  onMarkerClick?: (location: Location) => void;
 }
 
 export function MapView({
@@ -75,14 +83,18 @@ export function MapView({
   onMapClick,
   className = "w-full h-[300px] rounded-lg overflow-hidden",
   showControls = true,
-  controlPosition = 'top-right'
+  controlPosition = 'top-right',
+  locations,
+  onMarkerClick
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const initialLoad = useRef(true);
   const [currentStyle, setCurrentStyle] = useState<string>('streets');
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
 
   useLayoutEffect(() => {
     const styleEl = document.createElement('style');
@@ -92,19 +104,16 @@ export function MapView({
   }, []);
 
   useEffect(() => {
-    if (map.current) {
-      const targetStyle = theme === 'dark' ? 'dark' : 'streets';
-      if (currentStyle !== targetStyle) {
-        map.current.setStyle(MAP_STYLES[targetStyle]);
-        setCurrentStyle(targetStyle);
-      }
-    }
-  }, [theme]);
-
-  useEffect(() => {
     if (!mapContainer.current) return;
 
-    const initialStyleKey = theme === 'dark' ? 'dark' : 'streets';
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+    if (marker.current) {
+      marker.current.remove();
+      marker.current = null;
+    }
+
+    const initialStyleKey = 'streets';
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -117,11 +126,42 @@ export function MapView({
 
     setCurrentStyle(initialStyleKey);
 
-    marker.current = new mapboxgl.Marker()
-      .setLngLat([longitude, latitude])
-      .addTo(map.current);
+    if (locations && locations.length > 0) {
+      markersRef.current = locations.map(loc => {
+        if (!loc.coordinates) return null;
+        const el = document.createElement('div');
+        el.className = 'location-marker-avatar';
+        const isCurrent = loc.id === undefined ? false : (loc.id === (window.location.pathname.split('/').pop() || ''));
+        el.style.width = isCurrent ? '60px' : '48px';
+        el.style.height = el.style.width;
+        el.style.borderRadius = '50%';
+        el.style.overflow = 'hidden';
+        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+        el.style.border = isCurrent ? '3px solid #ef4444' : '2px solid #fff';
+        el.style.backgroundImage = `url(${loc.images?.[0] || 'https://via.placeholder.com/150'})`;
+        el.style.backgroundSize = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.style.cursor = 'pointer';
+        if (onMarkerClick) {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            onMarkerClick(loc);
+          });
+        }
+        return new mapboxgl.Marker(el)
+          .setLngLat([loc.coordinates.longitude, loc.coordinates.latitude])
+          .addTo(map.current!);
+      }).filter(Boolean) as mapboxgl.Marker[];
+    } else {
+      marker.current = new mapboxgl.Marker()
+        .setLngLat([longitude, latitude])
+        .addTo(map.current!);
+    }
 
-    map.current.scrollZoom.disable();
+    if (isMobile) {
+      map.current.dragPan.disable();
+      map.current.touchZoomRotate.enable();
+    }
 
     const overlay = document.createElement('div');
     overlay.className = 'map-control-overlay';
@@ -288,6 +328,15 @@ export function MapView({
       map.current?.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const targetStyle = 'streets';
+    if (currentStyle !== targetStyle) {
+      map.current.setStyle(MAP_STYLES[targetStyle]);
+      setCurrentStyle(targetStyle);
+    }
+  }, [theme, currentStyle]);
 
   useEffect(() => {
     if (!map.current || !marker.current || initialLoad.current) {

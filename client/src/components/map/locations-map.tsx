@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Location } from '@/types/location';
 import { useTheme } from '@/hooks/use-theme';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const mapControlStyles = `
   .mapboxgl-ctrl-group {
@@ -66,6 +67,7 @@ export function LocationsMap({
     className = "w-full h-[70vh] rounded-lg border shadow-sm",
     center
 }: LocationsMapProps) {
+    const isMobile = useIsMobile();
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<{ [key: string]: mapboxgl.Marker }>({});
@@ -84,7 +86,7 @@ export function LocationsMap({
 
     useEffect(() => {
         if (mapRef.current) {
-            const targetStyle = theme === 'dark' ? 'dark' : 'streets';
+            const targetStyle = 'streets';
             if (currentStyle !== targetStyle) {
                 mapRef.current.setStyle(MAP_STYLES[targetStyle]);
                 setCurrentStyle(targetStyle);
@@ -103,7 +105,7 @@ export function LocationsMap({
 
         mapboxgl.accessToken = token;
 
-        const initialStyleKey = theme === 'dark' ? 'dark' : 'streets';
+        const initialStyleKey = 'streets';
 
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
@@ -114,6 +116,11 @@ export function LocationsMap({
         });
 
         setCurrentStyle(initialStyleKey);
+
+        if (isMobile) {
+            mapRef.current.dragPan.disable();
+            mapRef.current.touchZoomRotate.enable();
+        }
 
         mapRef.current.scrollZoom.disable();
 
@@ -299,20 +306,20 @@ export function LocationsMap({
         el.style.backgroundSize = 'cover';
         el.style.backgroundPosition = 'center';
 
-        const priceTag = document.createElement('div');
-        priceTag.className = 'location-price-tag';
-        priceTag.style.position = 'absolute';
-        priceTag.style.bottom = '-5px';
-        priceTag.style.left = '50%';
-        priceTag.style.transform = 'translateX(-50%)';
-        priceTag.style.backgroundColor = 'var(--primary)';
-        priceTag.style.color = 'var(--primary-foreground)';
-        priceTag.style.padding = '2px 6px';
-        priceTag.style.borderRadius = '10px';
-        priceTag.style.fontSize = '10px';
-        priceTag.style.fontWeight = 'bold';
-        priceTag.textContent = `${location.price}€`;
-        el.appendChild(priceTag);
+        // const priceTag = document.createElement('div');
+        // priceTag.className = 'location-price-tag';
+        // priceTag.style.position = 'absolute';
+        // priceTag.style.bottom = '-5px';
+        // priceTag.style.left = '50%';
+        // priceTag.style.transform = 'translateX(-50%)';
+        // priceTag.style.backgroundColor = 'var(--primary)';
+        // priceTag.style.color = 'var(--primary-foreground)';
+        // priceTag.style.padding = '2px 6px';
+        // priceTag.style.borderRadius = '10px';
+        // priceTag.style.fontSize = '10px';
+        // priceTag.style.fontWeight = 'bold';
+        // priceTag.textContent = `${location.price}€`;
+        // el.appendChild(priceTag);
 
         const popupStyles = `
         .mapboxgl-popup-content {

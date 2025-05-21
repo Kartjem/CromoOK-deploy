@@ -1,5 +1,5 @@
 import { Link, useLocation as useRouterLocation } from 'react-router-dom';
-import { Plus, Search, Filter, SlidersHorizontal, Loader2, MapPin, Grid, List, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, SlidersHorizontal, Loader2, MapPin, Grid, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LocationCard } from '@/components/locations/location-card';
 import { useLocations } from '@/hooks/useLocations';
@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import { type Location, type LocationFilter } from '@/types/location';
 
+
 type SortOption = {
     label: string;
     value: keyof Location | 'rating' | 'price';
@@ -50,10 +50,8 @@ export default function LocationsPage() {
         value: 'createdAt',
         direction: 'desc'
     });
-    const [priceRange, setPriceRange] = useState([0, 10000]);
     const routerLocation = useRouterLocation();
 
-    // Восстановление позиции прокрутки при возврате на страницу
     useEffect(() => {
         const savedScrollPosition = sessionStorage.getItem('locationsScrollPosition');
         if (savedScrollPosition && routerLocation.state?.from === 'details') {
@@ -88,11 +86,7 @@ export default function LocationsPage() {
     });
 
     const sortedLocations = [...(filteredLocations || [])].sort((a, b) => {
-        if (sortOption.value === 'price') {
-            return sortOption.direction === 'asc'
-                ? a.price - b.price
-                : b.price - a.price;
-        } else if (sortOption.value === 'rating') {
+        if (sortOption.value === 'rating') {
             const ratingA = a.rating || 0;
             const ratingB = b.rating || 0;
             return sortOption.direction === 'asc'
@@ -117,17 +111,8 @@ export default function LocationsPage() {
     const sortOptions: SortOption[] = [
         { label: 'Newest first', value: 'createdAt', direction: 'desc' },
         { label: 'Oldest first', value: 'createdAt', direction: 'asc' },
-        { label: 'Price: high to low', value: 'price', direction: 'desc' },
-        { label: 'Price: low to high', value: 'price', direction: 'asc' },
         { label: 'Rating: high to low', value: 'rating', direction: 'desc' },
         { label: 'Rating: low to high', value: 'rating', direction: 'asc' },
-    ];
-
-    const priceRanges = [
-        { min: null, max: 50, label: 'Up to 50€' },
-        { min: 50, max: 100, label: '50€ - 100€' },
-        { min: 100, max: 200, label: '100€ - 200€' },
-        { min: 200, max: null, label: 'From 200€' },
     ];
 
     const availableAmenities = locations?.reduce((acc, location) => {
@@ -191,49 +176,6 @@ export default function LocationsPage() {
                                         </SheetHeader>
                                         <div className="mt-6 space-y-6">
                                             <div>
-                                                <h3 className="text-sm font-medium mb-3 text-primary-foreground">Hourly Rate</h3>
-                                                <div className="grid grid-cols-2 gap-2 mb-6">
-                                                    {priceRanges.map((range, index) => (
-                                                        <Button
-                                                            key={index}
-                                                            variant={
-                                                                activeFilters.minPrice === range.min &&
-                                                                    activeFilters.maxPrice === range.max
-                                                                    ? "default"
-                                                                    : "outline"
-                                                            }
-                                                            className="justify-start text-primary-foreground"
-                                                            onClick={() => setActiveFilters({
-                                                                ...activeFilters,
-                                                                minPrice: range.min === null ? undefined : range.min,
-                                                                maxPrice: range.max === null ? undefined : range.max
-                                                            })}
-                                                        >
-                                                            {range.label}
-                                                        </Button>
-                                                    ))}
-                                                    <Slider
-                                                        value={priceRange}
-                                                        onValueChange={(value) => {
-                                                            setPriceRange(value as number[]);
-                                                            setActiveFilters({
-                                                                ...activeFilters,
-                                                                minPrice: value[0],
-                                                                maxPrice: value[1]
-                                                            });
-                                                        }}
-                                                        min={0}
-                                                        max={10000}
-                                                        step={100}
-                                                        showValues
-                                                        valuePosition="bottom"
-                                                        formatValue={(value) => `${value}€`}
-                                                        className="my-4"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
                                                 <h3 className="text-sm font-medium mb-3 text-primary-foreground">Amenities</h3>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {availableAmenities.slice(0, 8).map((amenity, index) => (
@@ -251,7 +193,6 @@ export default function LocationsPage() {
                                                                 const newAmenities = currentAmenities.includes(amenity)
                                                                     ? currentAmenities.filter(a => a !== amenity)
                                                                     : [...currentAmenities, amenity];
-
                                                                 setActiveFilters({
                                                                     ...activeFilters,
                                                                     amenities: newAmenities.length ? newAmenities : undefined
@@ -317,16 +258,6 @@ export default function LocationsPage() {
                                     >
                                         <Grid className="h-4 w-4" />
                                         <span className="sr-only">Grid view</span>
-                                    </Button>
-                                    <Separator orientation="vertical" />
-                                    <Button
-                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
-                                        size="icon"
-                                        className="h-9 w-9"
-                                        onClick={() => setViewMode('list')}
-                                    >
-                                        <List className="h-4 w-4" />
-                                        <span className="sr-only">List view</span>
                                     </Button>
                                     <Separator orientation="vertical" />
                                     <Button
@@ -421,81 +352,11 @@ export default function LocationsPage() {
                     </div>
                 ) : sortedLocations && sortedLocations.length > 0 ? (
                     <>
-                        {viewMode === 'grid' ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                                {sortedLocations.map((location) => (
-                                    <LocationCard key={location.id} location={location} />
-                                ))}
-                            </div>
-                        ) : viewMode === 'list' ? (
-                            <div className="flex flex-col gap-4 animate-fade-in">
-                                {sortedLocations.map((location) => (
-                                    <Card key={location.id} className="overflow-hidden">
-                                        <div className="flex flex-col sm:flex-row">
-                                            <div className="sm:w-48 h-36 sm:h-auto relative">
-                                                <img
-                                                    src={location.images[0] || 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?q=80&w=2940&auto=format&fit=crop'}
-                                                    alt={location.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <CardContent className="flex-1 p-4 flex flex-col justify-between">
-                                                <div>
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <h3 className="font-semibold text-lg text-primary-foreground">{location.title}</h3>
-                                                        <div className="flex items-center gap-1">
-                                                            {location.rating && (
-                                                                <Badge variant="secondary">⭐ {location.rating}</Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mb-2">
-                                                        <MapPin className="h-3.5 w-3.5" /> {location.address}
-                                                    </p>
-                                                    <div className="hidden sm:flex flex-wrap gap-2 mt-2">
-                                                        {location.amenities.slice(0, 3).map((amenity, index) => (
-                                                            <Badge key={index} variant="outline">
-                                                                {amenity}
-                                                            </Badge>
-                                                        ))}
-                                                        {location.amenities.length > 3 && (
-                                                            <Badge variant="outline">
-                                                                +{location.amenities.length - 3}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between mt-4">
-                                                    <div>
-                                                        <span className="font-bold text-lg text-primary-foreground">{location.price}€</span>
-                                                        <span className="text-sm text-muted-foreground">/hour</span>
-                                                    </div>
-                                                    <Button asChild size="sm">
-                                                        <Link to={`/locations/${location.id}`}>
-                                                            View Details
-                                                        </Link>
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center p-12 rounded-md border">
-                                <div className="text-center">
-                                    <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">Map View Coming Soon</h3>
-                                    <p className="text-muted-foreground mb-4">
-                                        This feature will be available soon
-                                    </p>
-                                    <Button onClick={() => setViewMode('grid')}>
-                                        Return to Grid View
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                            {sortedLocations.map((location) => (
+                                <LocationCard key={location.id} location={location} />
+                            ))}
+                        </div>
                         <div className="mt-6 text-center text-sm text-muted-foreground">
                             Showing {sortedLocations.length} of {locations?.length || 0} locations
                         </div>
@@ -525,3 +386,4 @@ export default function LocationsPage() {
         </div>
     );
 }
+
