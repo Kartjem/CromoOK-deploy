@@ -12,5 +12,8 @@
   "type": "commonjs",
   "devDependencies": {
     "supabase": "^2.15.8"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.3"
   }
 }
